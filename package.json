@@ -4,7 +4,7 @@
   "description": "example for setup restful-api with nodejs express mongodb using typescript",
   "main": "./dist/server.js",
   "scripts": {
-    "test": "ts-node ./lib/server.ts",
+    "test": "ts-node ./src/server.ts",
     "dev": "tsc && nodemon ./dist/server.js",
     "prod": "tsc && nodemon ./dist/server.js"
   },
