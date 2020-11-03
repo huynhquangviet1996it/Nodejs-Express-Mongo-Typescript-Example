@@ -9,7 +9,7 @@ class Environment {
     private environment: String;
 
     constructor(environment: String) {
-        this.environment = environment;
+        this.environment = environment ?? Environments.local_environment;
     }
 
     getPort(): Number {
@@ -49,4 +49,4 @@ class Environment {
     }
 }
 
-export default new Environment(Environments.local_environment);
+export default new Environment(process.env.evn_name);

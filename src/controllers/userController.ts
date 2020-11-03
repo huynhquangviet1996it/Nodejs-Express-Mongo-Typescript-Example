@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import Joi = require('joi');
 import { insufficientParameters, mongoError, successResponse, failureResponse } from '../modules/common/service';
 import { IUser } from '../modules/user/model';
 import UserService from '../modules/user/service';
@@ -9,10 +10,7 @@ export class UserController {
 
     public create_user(req: Request, res: Response) {
         // this check whether all the filds were send through the erquest or not
-        if (req.body.name && req.body.name.first_name && req.body.name.middle_name && req.body.name.last_name &&
-            req.body.email &&
-            req.body.phone_number &&
-            req.body.gender) {
+        if (this.validateCreateUser(req.body)) {
             const user_params: IUser = {
                 name: {
                     first_name: req.body.name.first_name,
@@ -57,13 +55,9 @@ export class UserController {
     }
 
     public update_user(req: Request, res: Response) {
-        if (req.params.id &&
-            req.body.name || req.body.name.first_name || req.body.name.middle_name || req.body.name.last_name ||
-            req.body.email ||
-            req.body.phone_number ||
-            req.body.gender) {
+        if (req.params.id && this.validateUpdateUser(req.body)) {
             const user_filter = { _id: req.params.id };
-            this.user_service.filterUser(user_filter, (err: any, user_data: IUser) => {
+            this.user_service.filterUser(user_filter, (err: any, user_data) => {
                 if (err) {
                     mongoError(err, res);
                 } else if (user_data) {
@@ -73,16 +67,14 @@ export class UserController {
                         modification_note: 'User data updated'
                     });
                     const user_params: IUser = {
+                        // just get document of object user_data
+                        ...user_data._doc,
+                        ...req.body,
                         _id: req.params.id,
-                        name: req.body.name ? {
-                            first_name: req.body.name.first_name ? req.body.name.first_name : user_data.name.first_name,
-                            middle_name: req.body.name.first_name ? req.body.name.middle_name : user_data.name.middle_name,
-                            last_name: req.body.name.first_name ? req.body.name.last_name : user_data.name.last_name
+                        name: req?.body?.name ? {
+                            ...user_data.name,
+                            ...req.body.name,
                         } : user_data.name,
-                        email: req.body.email ? req.body.email : user_data.email,
-                        phone_number: req.body.phone_number ? req.body.phone_number : user_data.phone_number,
-                        gender: req.body.gender ? req.body.gender : user_data.gender,
-                        is_deleted: req.body.is_deleted ? req.body.is_deleted : user_data.is_deleted,
                         modification_notes: user_data.modification_notes
                     };
                     this.user_service.updateUser(user_params, (err: any) => {
@@ -107,7 +99,7 @@ export class UserController {
                 if (err) {
                     mongoError(err, res);
                 } else if (delete_details.deletedCount !== 0) {
-                    successResponse('delete user successfull', null, res);
+                    successResponse('delete user successfull', delete_details, res);
                 } else {
                     failureResponse('invalid user', null, res);
                 }
@@ -115,5 +107,47 @@ export class UserController {
         } else {
             insufficientParameters(res);
         }
+    }
+
+    public validateCreateUser(body: IUser) {
+        const schema = Joi.object({
+            name: Joi.object({
+                first_name: Joi.string().required(),
+                middle_name: Joi.string().required(),
+                last_name: Joi.string().required(),
+            }).required(),
+            email: Joi.string().email().required(),
+            phone_number: Joi.string().required(),
+            gender: Joi.string().required(),
+        })
+        try {
+            const value = schema.validate(body);
+            return value
+            
+        }
+        catch (err) {
+            throw err
+         }
+    }
+
+    public validateUpdateUser(body: IUser) {
+        const schema = Joi.object({
+            name: Joi.object({
+                first_name: Joi.string(),
+                middle_name: Joi.string(),
+                last_name: Joi.string(),
+            }),
+            email: Joi.string().email(),
+            phone_number: Joi.string(),
+            gender: Joi.string(),
+        })
+        try {
+            const value = schema.validate(body);
+            return value
+            
+        }
+        catch (err) {
+            throw err
+         }
     }
 }
